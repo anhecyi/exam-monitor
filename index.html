@@ -1,0 +1,328 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>纪律监控平台 · 云端版</title>
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; font-family:-apple-system,"PingFang SC","Microsoft YaHei",sans-serif; }
+  body { background:#0a0e17; color:#e6edf5; min-height:100vh; padding:20px; }
+  .container { max-width:1200px; margin:0 auto; }
+  .header { display:flex; justify-content:space-between; align-items:center; padding:20px 28px; background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.08); border-radius:16px; margin-bottom:20px; }
+  .header h1 { font-size:1.3rem; background:linear-gradient(90deg,#fff,#8ab4ff); -webkit-background-clip:text; background-clip:text; color:transparent; }
+  .header .user { font-size:0.85rem; color:#8fa8c0; }
+  .card { background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.08); border-radius:20px; padding:24px; margin-bottom:20px; }
+  .card h2 { font-size:1rem; margin-bottom:16px; color:#c4d4e8; }
+  .btn { padding:12px 24px; border:none; border-radius:12px; background:linear-gradient(135deg,#2b7cff,#00d4aa); color:#fff; font-weight:600; cursor:pointer; font-size:0.9rem; }
+  .btn:hover { opacity:0.9; }
+  .btn-danger { background:rgba(255,71,87,0.15); color:#ff6b6b; border:1px solid rgba(255,71,87,0.3); }
+  .btn:disabled { opacity:0.4; cursor:not-allowed; }
+  input { padding:12px 16px; border-radius:12px; border:1px solid rgba(255,255,255,0.1); background:rgba(0,0,0,0.3); color:#fff; font-size:1rem; outline:none; }
+  input:focus { border-color:#2b7cff; }
+  .grid { display:grid; grid-template-columns:1fr 1fr; gap:20px; }
+  .video-wrap { position:relative; width:100%; aspect-ratio:4/3; background:#000; border-radius:16px; overflow:hidden; }
+  video { width:100%; height:100%; object-fit:cover; transform:scaleX(-1); }
+  .badge { position:absolute; top:12px; left:12px; padding:6px 14px; border-radius:100px; background:rgba(0,0,0,0.7); font-size:0.8rem; display:flex; align-items:center; gap:6px; }
+  .dot { width:8px; height:8px; border-radius:50%; background:#ff4757; }
+  .dot.active { background:#00d4aa; animation:pulse 1.5s infinite; }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
+  .timer { font-size:3rem; font-weight:700; text-align:center; font-variant-numeric:tabular-nums; margin:16px 0; background:linear-gradient(90deg,#fff,#8ab4ff); -webkit-background-clip:text; background-clip:text; color:transparent; }
+  .capture-list { display:grid; grid-template-columns:repeat(auto-fill,minmax(160px,1fr)); gap:12px; max-height:400px; overflow-y:auto; }
+  .capture-item img { width:100%; aspect-ratio:4/3; object-fit:cover; border-radius:12px; }
+  .capture-item .meta { font-size:0.7rem; color:#8fa8c0; margin-top:4px; }
+  .record-item { padding:12px 16px; background:rgba(0,0,0,0.2); border-radius:12px; margin-bottom:8px; font-size:0.85rem; }
+  .record-item .time { color:#00d4aa; font-size:0.75rem; }
+  .record-item .ua { color:#6b8299; font-size:0.7rem; word-break:break-all; margin-top:4px; }
+  .tabs { display:flex; gap:8px; margin-bottom:20px; flex-wrap:wrap; }
+  .tab { padding:10px 20px; border-radius:12px; background:rgba(255,255,255,0.05); cursor:pointer; font-size:0.85rem; border:1px solid transparent; }
+  .tab.active { background:rgba(43,124,255,0.2); border-color:#2b7cff; color:#8ab4ff; }
+  .hidden { display:none; }
+  .login-box { max-width:400px; margin:80px auto; }
+  .login-box h1 { text-align:center; font-size:1.8rem; margin-bottom:8px; background:linear-gradient(90deg,#fff,#8ab4ff); -webkit-background-clip:text; background-clip:text; color:transparent; }
+  .login-box p { text-align:center; color:#6b8299; margin-bottom:32px; font-size:0.85rem; }
+  .login-box input { width:100%; margin-bottom:16px; }
+  .login-box .btn { width:100%; padding:16px; font-size:1rem; }
+  .empty { text-align:center; padding:40px; color:#4a5e72; font-size:0.85rem; }
+  @media(max-width:768px){ .grid{grid-template-columns:1fr;} }
+</style>
+</head>
+<body>
+
+<div id="loginPage" class="login-box">
+  <h1>🎓 纪律监控平台</h1>
+  <p>云端版 · 登录后开始监控</p>
+  <input type="text" id="usernameInput" placeholder="请输入您的姓名" autocomplete="off">
+  <button class="btn" id="loginBtn">登 录</button>
+</div>
+
+<div id="appPage" class="container hidden">
+  <div class="header">
+    <h1>🎓 纪律监控平台</h1>
+    <div class="user">👤 <span id="currentUser"></span> · <a href="#" id="logoutBtn" style="color:#ff6b6b;text-decoration:none;">退出</a></div>
+  </div>
+
+  <div class="tabs">
+    <div class="tab active" data-tab="exam">考场</div>
+    <div class="tab" data-tab="morning">早读</div>
+    <div class="tab" data-tab="noon">午写</div>
+    <div class="tab" data-tab="admin">📊 云端后台</div>
+  </div>
+
+  <div id="tab-exam" class="tab-content">
+    <div class="grid">
+      <div class="card">
+        <h2>📹 前置摄像头 · 考场监控</h2>
+        <div class="video-wrap">
+          <video id="video-exam" autoplay muted playsinline></video>
+          <div class="badge"><span class="dot" id="dot-exam"></span><span id="status-exam">未开启</span></div>
+        </div>
+        <div style="margin-top:16px; display:flex; gap:12px; flex-wrap:wrap;">
+          <button class="btn" id="start-exam">▶ 开始检测</button>
+          <button class="btn btn-danger" id="stop-exam" disabled>■ 停止</button>
+        </div>
+      </div>
+      <div class="card">
+        <h2>⏳ 考试倒计时</h2>
+        <div style="display:flex; gap:12px; align-items:center; margin-bottom:12px;">
+          <span style="color:#8fa8c0;font-size:0.85rem;">时长(分钟)</span>
+          <input type="number" id="duration-exam" value="30" min="1" max="180" style="width:80px;text-align:center;">
+        </div>
+        <div class="timer" id="timer-exam">30:00</div>
+        <h2 style="margin-top:24px;">📸 抓拍记录</h2>
+        <div class="capture-list" id="captures-exam"><div class="empty">暂无抓拍</div></div>
+      </div>
+    </div>
+  </div>
+
+  <div id="tab-morning" class="tab-content hidden">
+    <div class="grid">
+      <div class="card">
+        <h2>📹 前置摄像头 · 早读监控</h2>
+        <div class="video-wrap">
+          <video id="video-morning" autoplay muted playsinline></video>
+          <div class="badge"><span class="dot" id="dot-morning"></span><span id="status-morning">未开启</span></div>
+        </div>
+        <div style="margin-top:16px; display:flex; gap:12px; flex-wrap:wrap;">
+          <button class="btn" id="start-morning">▶ 开始检测</button>
+          <button class="btn btn-danger" id="stop-morning" disabled>■ 停止</button>
+        </div>
+      </div>
+      <div class="card">
+        <h2>⏳ 早读时长累积</h2>
+        <div class="timer" id="timer-morning">00:00</div>
+        <h2 style="margin-top:24px;">📸 抓拍记录</h2>
+        <div class="capture-list" id="captures-morning"><div class="empty">暂无抓拍</div></div>
+      </div>
+    </div>
+  </div>
+
+  <div id="tab-noon" class="tab-content hidden">
+    <div class="grid">
+      <div class="card">
+        <h2>📹 前置摄像头 · 午写监控</h2>
+        <div class="video-wrap">
+          <video id="video-noon" autoplay muted playsinline></video>
+          <div class="badge"><span class="dot" id="dot-noon"></span><span id="status-noon">未开启</span></div>
+        </div>
+        <div style="margin-top:16px; display:flex; gap:12px; flex-wrap:wrap;">
+          <button class="btn" id="start-noon">▶ 开始检测</button>
+          <button class="btn btn-danger" id="stop-noon" disabled>■ 停止</button>
+        </div>
+      </div>
+      <div class="card">
+        <h2>⏳ 午写时长累积</h2>
+        <div class="timer" id="timer-noon">00:00</div>
+        <h2 style="margin-top:24px;">📸 抓拍记录</h2>
+        <div class="capture-list" id="captures-noon"><div class="empty">暂无抓拍</div></div>
+      </div>
+    </div>
+  </div>
+
+  <div id="tab-admin" class="tab-content hidden">
+    <div class="card">
+      <h2>📋 所有登录记录 <button class="btn" id="refresh-logins" style="float:right;padding:6px 14px;font-size:0.75rem;">刷新</button></h2>
+      <div id="loginRecords"><div class="empty">加载中...</div></div>
+    </div>
+    <div class="card">
+      <h2>📸 所有抓拍记录 <button class="btn" id="refresh-captures" style="float:right;padding:6px 14px;font-size:0.75rem;">刷新</button></h2>
+      <div class="capture-list" id="allCaptures"><div class="empty">加载中...</div></div>
+    </div>
+  </div>
+</div>
+
+<script>
+const API_BASE = '';
+let currentUser = localStorage.getItem('exam_user') || '';
+const scenes = {
+  exam:    { video:'video-exam',    dot:'dot-exam',    status:'status-exam',    timer:'timer-exam',    captures:'captures-exam',    startBtn:'start-exam',    stopBtn:'stop-exam',    duration:'duration-exam' },
+  morning: { video:'video-morning', dot:'dot-morning', status:'status-morning', timer:'timer-morning', captures:'captures-morning', startBtn:'start-morning', stopBtn:'stop-morning' },
+  noon:    { video:'video-noon',    dot:'dot-noon',    status:'status-noon',    timer:'timer-noon',    captures:'captures-noon',    startBtn:'start-noon',    stopBtn:'stop-noon' }
+};
+const state = {
+  exam:    { stream:null, monitoring:false, detectionInterval:null, countdownInterval:null, remaining:1800, total:1800, lastCapture:0, elapsed:0 },
+  morning: { stream:null, monitoring:false, detectionInterval:null, countdownInterval:null, remaining:0, total:0, lastCapture:0, elapsed:0 },
+  noon:    { stream:null, monitoring:false, detectionInterval:null, countdownInterval:null, remaining:0, total:0, lastCapture:0, elapsed:0 }
+};
+
+function $(id){ return document.getElementById(id); }
+function formatTime(sec){ const m=Math.floor(sec/60), s=sec%60; return `${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`; }
+function api(path, options){ return fetch(API_BASE + path, options).then(r=>r.json()); }
+
+async function doLogin(){
+  const username = $('usernameInput').value.trim();
+  if(!username){ alert('请输入姓名'); return; }
+  try{
+    await api('/api/login', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ username }) });
+    currentUser = username;
+    localStorage.setItem('exam_user', username);
+    showApp();
+  }catch(e){ alert('登录失败：'+e.message); }
+}
+
+function showApp(){
+  $('loginPage').classList.add('hidden');
+  $('appPage').classList.remove('hidden');
+  $('currentUser').textContent = currentUser;
+  loadCaptures('exam'); loadCaptures('morning'); loadCaptures('noon');
+}
+
+function logout(){ localStorage.removeItem('exam_user'); location.reload(); }
+
+document.querySelectorAll('.tab').forEach(tab=>{
+  tab.addEventListener('click', ()=>{
+    document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+    tab.classList.add('active');
+    document.querySelectorAll('.tab-content').forEach(c=>c.classList.add('hidden'));
+    $('tab-'+tab.dataset.tab).classList.remove('hidden');
+    if(tab.dataset.tab==='admin'){ loadLoginRecords(); loadAllCaptures(); }
+  });
+});
+
+async function startScene(scene){
+  const s = state[scene], cfg = scenes[scene];
+  if(s.monitoring) return;
+  try{
+    const stream = await navigator.mediaDevices.getUserMedia({ video:{ facingMode:'user', width:{ideal:1280}, height:{ideal:720} }, audio:false });
+    s.stream = stream;
+    $(cfg.video).srcObject = stream;
+    await $(cfg.video).play();
+    s.monitoring = true;
+    $(cfg.dot).classList.add('active');
+    $(cfg.status).textContent = '监控中';
+    $(cfg.startBtn).disabled = true;
+    $(cfg.stopBtn).disabled = false;
+
+    if(scene==='exam'){
+      const mins = parseInt($(cfg.duration).value,10) || 30;
+      s.total = mins*60; s.remaining = s.total;
+      $(cfg.timer).textContent = formatTime(s.remaining);
+      if(s.countdownInterval) clearInterval(s.countdownInterval);
+      s.countdownInterval = setInterval(()=>{
+        if(s.remaining<=0){ clearInterval(s.countdownInterval); s.countdownInterval=null; stopScene(scene); return; }
+        s.remaining--; $(cfg.timer).textContent = formatTime(s.remaining);
+      },1000);
+    } else {
+      s.elapsed = 0;
+      if(s.countdownInterval) clearInterval(s.countdownInterval);
+      s.countdownInterval = setInterval(()=>{ s.elapsed++; $(cfg.timer).textContent = formatTime(s.elapsed); },1000);
+    }
+
+    if(s.detectionInterval) clearInterval(s.detectionInterval);
+    s.detectionInterval = setInterval(()=>{
+      if(!s.monitoring) return;
+      const now = Date.now();
+      if(now - s.lastCapture < 6000) return;
+      if(Math.random() < 0.3){ s.lastCapture = now; captureAndUpload(scene); }
+    },2000);
+
+  }catch(e){ alert('摄像头开启失败：'+e.message); }
+}
+
+function stopScene(scene){
+  const s = state[scene], cfg = scenes[scene];
+  s.monitoring = false;
+  if(s.detectionInterval){ clearInterval(s.detectionInterval); s.detectionInterval=null; }
+  if(s.countdownInterval){ clearInterval(s.countdownInterval); s.countdownInterval=null; }
+  if(s.stream){ s.stream.getTracks().forEach(t=>t.stop()); s.stream=null; }
+  $(cfg.video).srcObject = null;
+  $(cfg.dot).classList.remove('active');
+  $(cfg.status).textContent = '未开启';
+  $(cfg.startBtn).disabled = false;
+  $(cfg.stopBtn).disabled = true;
+}
+
+function captureAndUpload(scene){
+  const s = state[scene], cfg = scenes[scene];
+  const video = $(cfg.video);
+  if(!video.videoWidth) return;
+  const canvas = document.createElement('canvas');
+  canvas.width = video.videoWidth;
+  canvas.height = video.videoHeight;
+  const ctx = canvas.getContext('2d');
+  ctx.translate(canvas.width,0); ctx.scale(-1,1);
+  ctx.drawImage(video,0,0,canvas.width,canvas.height);
+  const base64 = canvas.toDataURL('image/png');
+  const reasons = { exam:'交头接耳（交谈声）', morning:'未开口读/交头接耳/坐姿不端正', noon:'说话/交头接耳/坐姿不端/未专注' };
+  api('/api/capture',{ method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ username: currentUser, scene, reason: reasons[scene], imageBase64: base64 }) })
+    .then(()=>{ loadCaptures(scene); addCaptureToUI(scene, base64); }).catch(e=>console.error(e));
+}
+
+function addCaptureToUI(scene, base64){
+  const list = $(scenes[scene].captures);
+  const empty = list.querySelector('.empty'); if(empty) empty.remove();
+  const item = document.createElement('div');
+  item.className = 'capture-item';
+  item.innerHTML = `<img src="${base64}"><div class="meta">${new Date().toLocaleTimeString('zh-CN',{hour12:false})}</div>`;
+  list.insertBefore(item, list.firstChild);
+}
+
+async function loadCaptures(scene){
+  try{
+    const all = await api('/api/captures');
+    const list = $(scenes[scene].captures);
+    const filtered = all.filter(c=>c.scene===scene).slice(0,20);
+    if(filtered.length===0){ list.innerHTML = '<div class="empty">暂无抓拍</div>'; return; }
+    list.innerHTML = filtered.map(c=>`<div class="capture-item"><img src="${c.image_url}"><div class="meta">${new Date(c.captured_at).toLocaleString('zh-CN',{hour12:false})}</div></div>`).join('');
+  }catch(e){ console.error(e); }
+}
+
+async function loadLoginRecords(){
+  const box = $('loginRecords');
+  try{
+    const records = await api('/api/login-records');
+    if(records.length===0){ box.innerHTML='<div class="empty">暂无登录记录</div>'; return; }
+    box.innerHTML = records.map(r=>`<div class="record-item"><div><strong>👤 ${r.username}</strong> · <span class="time">${new Date(r.login_time).toLocaleString('zh-CN',{hour12:false})}</span></div><div class="ua">IP: ${r.ip_address||'未知'} · ${r.user_agent||''}</div></div>`).join('');
+  }catch(e){ box.innerHTML = '<div class="empty">加载失败：'+e.message+'</div>'; }
+}
+
+async function loadAllCaptures(){
+  const box = $('allCaptures');
+  try{
+    const records = await api('/api/captures');
+    if(records.length===0){ box.innerHTML='<div class="empty">暂无抓拍</div>'; return; }
+    box.innerHTML = records.map(c=>`<div class="capture-item"><img src="${c.image_url}"><div class="meta">${c.username} · ${c.scene}<br>${new Date(c.captured_at).toLocaleString('zh-CN',{hour12:false})}</div></div>`).join('');
+  }catch(e){ box.innerHTML = '<div class="empty">加载失败：'+e.message+'</div>'; }
+}
+
+$('loginBtn').addEventListener('click', doLogin);
+$('usernameInput').addEventListener('keydown', e=>{ if(e.key==='Enter') doLogin(); });
+$('logoutBtn').addEventListener('click', e=>{ e.preventDefault(); logout(); });
+Object.keys(scenes).forEach(scene=>{
+  const cfg = scenes[scene];
+  $(cfg.startBtn).addEventListener('click', ()=>startScene(scene));
+  $(cfg.stopBtn).addEventListener('click', ()=>stopScene(scene));
+});
+$('refresh-logins').addEventListener('click', loadLoginRecords);
+$('refresh-captures').addEventListener('click', loadAllCaptures);
+if(currentUser){ showApp(); }
+window.addEventListener('beforeunload', ()=>{
+  Object.keys(state).forEach(scene=>{
+    const s = state[scene];
+    if(s.stream) s.stream.getTracks().forEach(t=>t.stop());
+    if(s.detectionInterval) clearInterval(s.detectionInterval);
+    if(s.countdownInterval) clearInterval(s.countdownInterval);
+  });
+});
+</script>
+</body>
+</html>
